@@ -1,25 +1,90 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
+title: 'Reproducible Research: Peer Assessment 1'
+output:
   html_document:
-    keep_md: true
+  keep_md: yes
 ---
 
 
 ## Loading and preprocessing the data
+```{r}
+setwd("~/Desktop/github/RepData_PeerAssessment1")
+activity<- read.csv("activity.csv")
+head(activity)
+str(activity)
+```
 
-
+After viewing the dataframe I don't think a reprocessing is needed at the moment.
 
 ## What is mean total number of steps taken per day?
-
+```{r}
+total_steps_per_day <- tapply(activity$steps, activity$date, sum)
+hist(total_steps_per_day, breaks = 10)
+mean_steps_per_day<- tapply(activity$steps, activity$date, mean)
+hist(mean_steps_per_day, breaks = 10)
+average_all_days<- mean(total_steps_per_day, na.rm = TRUE)
+median_all_days<- median(total_steps_per_day, na.rm = TRUE)
+average_all_days
+median_all_days
+```
 
 
 ## What is the average daily activity pattern?
-
-
+```{r}
+mean_steps_per_interval<- tapply(activity$steps, activity$interval, mean, na.rm = TRUE)
+str(mean_steps_per_interval)
+plot(mean_steps_per_interval, type = "l")
+max(mean_steps_per_interval)
+my_obs<- which(mean_steps_per_interval== max(mean_steps_per_interval))
+my_obs
+```
 
 ## Imputing missing values
+First let's see how many NAs are there.
 
+sum(is.na(activity))
+sum(is.na(activity$steps))
+
+Ok, the same number in the dataframe and in steps vector.
+Now we have to figure out a strategy to fill in with something meaningful.
+I think that replacing the NA with the mean value for that interval across the day could make sense.
+We already have a vector of mean value for each interval, so we have to think how to use it to fill in the NA values. Let's check if this vector has Na values in it.
+
+sum(is.na(mean_steps_per_interval))
+
+ok, nothing there!
+
+Now I created a logical index vector that could be of use in selecting what values to replace and what not
+
+```{r}
+index<- is.na(activity$steps) 
+long_mean_steps_per_interval<- rep(mean_steps_per_interval, 61)
+library(dplyr)
+activity<- tbl_df(activity)
+activity_1<- mutate(activity, steps = replace(steps, index, long_mean_steps_per_interval))
+str(activity_1)
+sum(is.na(activity_1))
+total_steps_per_day_1 <- tapply(activity_1$steps, activity_1$date, sum)
+hist(total_steps_per_day_1, breaks = 10)
+average_daily_1<- mean(total_steps_per_day_1)
+median_daily_1<- median(total_steps_per_day_1)
+average_daily_1
+median_daily_1
+```
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+*first convert date in a Date Format*
+```{r}
+activity_2<- mutate(activity_1, date = as.Date(date, "%Y-%m-%d"))
+str(activity_2)
+```
+
+*then add a column with weekdays*
+```{r}
+activity_2<- mutate(activity_2, weekdays = weekdays(date))
+```
+
+*now create a column with two factors: weekend and weekday*
+
