@@ -1,8 +1,10 @@
 ---
 title: 'Reproducible Research: Peer Assessment 1'
 output:
-  html_document:
+  html_document: null
   keep_md: yes
+  pdf_document: default
+  word_document: default
 ---
 
 
@@ -14,7 +16,9 @@ head(activity)
 str(activity)
 ```
 
-After viewing the dataframe I don't think a reprocessing is needed at the moment.
+*After viewing the dataframe I don't think a reprocessing is needed at the moment.*  
+
+___
 
 ## What is mean total number of steps taken per day?
 ```{r}
@@ -28,6 +32,7 @@ average_all_days
 median_all_days
 ```
 
+___
 
 ## What is the average daily activity pattern?
 ```{r}
@@ -39,24 +44,29 @@ my_obs<- which(mean_steps_per_interval== max(mean_steps_per_interval))
 my_obs
 ```
 
+___
+
 ## Imputing missing values
-First let's see how many NAs are there.
 
-sum(is.na(activity))
-sum(is.na(activity$steps))
-
-Ok, the same number in the dataframe and in steps vector.
-Now we have to figure out a strategy to fill in with something meaningful.
-I think that replacing the NA with the mean value for that interval across the day could make sense.
-We already have a vector of mean value for each interval, so we have to think how to use it to fill in the NA values. Let's check if this vector has Na values in it.
-
-sum(is.na(mean_steps_per_interval))
-
-ok, nothing there!
-
-Now I created a logical index vector that could be of use in selecting what values to replace and what not
+*First let's see how many NAs are there.*
 
 ```{r}
+sum(is.na(activity))
+sum(is.na(activity$steps))
+```
+
+*Ok, the same number in the dataframe and in steps vector.
+Now we have to figure out a strategy to fill in with something meaningful. I think that replacing the NA with the mean value for that interval across the day could make sense.
+We already have a vector of mean value for each interval, so we have to think how to use it to fill in the NA values. Let's check if this vector has Na values in it.*
+
+```{r}
+sum(is.na(mean_steps_per_interval))
+```
+
+*ok, nothing there!
+Now I created a logical index vector that could be of use in selecting what values to replace and what not*
+
+```{r, message = FALSE, warning = FALSE, error = FALSE}
 index<- is.na(activity$steps) 
 long_mean_steps_per_interval<- rep(mean_steps_per_interval, 61)
 library(dplyr)
@@ -73,6 +83,8 @@ median_daily_1
 ```
 
 
+___
+
 ## Are there differences in activity patterns between weekdays and weekends?
 
 *first convert date in a Date Format*
@@ -87,4 +99,33 @@ activity_2<- mutate(activity_2, weekdays = weekdays(date))
 ```
 
 *now create a column with two factors: weekend and weekday*
+*first convert date in a Date Format*
+```{r}
+activity_2<- mutate(activity_1, date = as.Date(date, "%Y-%m-%d"))
+str(activity_2)
+```
+
+*then add a column with weekdays*
+```{r}
+activity_2<- mutate(activity_2, weekdays = weekdays(date))
+```
+
+*now we have to create a column with two factors: weekend and weekday and to take advantage of an index vector we have to use numbers for weekdays so I'm going to use lubridate*
+  
+```{r}
+library(lubridate)
+activity_2<- mutate(activity_2, weekdays = wday(date, label=FALSE))
+index_wdays<- which(activity_2$weekdays>=2 & activity_2$weekdays<=6)
+index_wend<- which(activity_2$weekdays==1 | activity_2$weekdays==7)
+activity_2<- mutate(activity_2, weekdays = replace(activity_2$weekdays, index_wend, "weekend"))
+activity_2<- mutate(activity_2, weekdays = replace(activity_2$weekdays, index_wdays, "weekday"))
+activity_2$weekdays<- as.factor(activity_2$weekdays)
+```
+
+*finally let's have a lattice plot*
+
+```{r}
+library(lattice)
+xyplot(steps~interval|weekdays, data=activity_2, type = "l", layout = c(1,2))
+```
 
